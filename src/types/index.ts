@@ -1,0 +1,578 @@
+export type EvidenceType = 'image' | 'video' | 'document' | 'link';
+export type VisibilityStatus = 'public' | 'private' | 'unlisted';
+export type EvidenceStatus = 'none' | 'attached' | 'verified';
+export type ConfirmationStatus = 'unconfirmed' | 'pending' | 'confirmed' | 'declined';
+
+export type AccountStatus = 'active' | 'restricted' | 'suspended' | 'deactivated';
+
+export interface UserRestrictions {
+  cannotRequestConfirmations?: boolean;
+  cannotMessage?: boolean;
+  cannotPublishWork?: boolean;
+  cannotAppearInDiscover?: boolean;
+  restrictedReason?: string;
+  restrictedAt?: string;
+  restrictedBy?: string;
+  restrictedByEmail?: string;
+}
+
+export type SuspensionDuration = '24h' | '7d' | '30d' | '90d' | 'indefinite';
+
+export interface SuspensionDetails {
+  reason: string;
+  internalNote?: string;
+  duration: SuspensionDuration;
+  suspendedAt: string;
+  expiresAt?: string | null;
+  suspendedBy: string;
+  suspendedByEmail: string;
+}
+
+export interface DeactivationDetails {
+  reason: string;
+  internalNote?: string;
+  deactivatedAt: string;
+  deactivatedBy: string;
+  deactivatedByEmail: string;
+  isEligibleForRestoration: boolean;
+  restorationNotes?: string;
+}
+
+export interface AccountRecoveryRecord {
+  lastRecoveryTriggeredAt: string;
+  recoveryToken: string;
+  recoveryLink: string;
+  recoveryStatus: 'pending' | 'used' | 'expired' | 'completed';
+  expiresAt: string;
+  triggeredBy: string;
+  triggeredByEmail: string;
+}
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  username: string; // unique slug e.g. "kwame-mensah"
+  email: string;
+  profilePhoto: string;
+  profession: string; // e.g. "Master Carpenter & Joiner" or "Independent Mobile Dev"
+  location: string;
+  shortBio: string;
+  skills: string[];
+  yearsOfExperience: number;
+  createdAt: string;
+  phone?: string;
+  onboardingCompleted?: boolean;
+  appearInDiscover?: boolean; // Profile privacy setting: Opt-in to appear in Discover
+  isFeatured?: boolean; // Admin curated: Featured professional
+  featuredRank?: number; // Priority display rank in Discover
+  homepageSpotlight?: boolean; // Placed in Landing / Hero spotlight
+  curationBadge?: string; // e.g. "Distinguished Artisan", "Verified Architect"
+  accountStatus?: AccountStatus; // 'active' | 'restricted' | 'suspended' | 'deactivated'
+  isSuspended?: boolean;
+  suspendedReason?: string;
+  suspendedAt?: string;
+  suspensionDetails?: SuspensionDetails;
+  isDeactivated?: boolean;
+  deactivationDetails?: DeactivationDetails;
+  restrictions?: UserRestrictions;
+  isFlagged?: boolean;
+  flaggedReason?: string;
+  adminRole?: AdminRole;
+  lastActiveAt?: string;
+  sessionsRevokedAt?: string; // timestamp when all existing sessions were invalidated
+  sessionVersion?: number;
+  recoveryRecord?: AccountRecoveryRecord;
+  adminNotes?: string[];
+  warnings?: UserWarningRecord[];
+}
+
+export interface UserWarningRecord {
+  id: string;
+  reason: string;
+  internalNote?: string;
+  issuedBy: string;
+  issuedByEmail: string;
+  issuedAt: string;
+  caseId?: string;
+}
+
+export interface EvidenceItem {
+  id: string;
+  workId: string;
+  type: EvidenceType;
+  url: string; // base64 data URL or external URL
+  caption: string;
+  fileName?: string;
+  fileSize?: string;
+  createdAt: string;
+}
+
+export interface ClientConfirmation {
+  id: string;
+  workId: string;
+  clientName: string;
+  clientEmail: string;
+  clientRole?: string; // e.g. "Homeowner", "Project Director", "Retail Client"
+  note?: string; // Optional short message from the creator to the client
+  testimonial?: string;
+  status: 'pending' | 'confirmed' | 'declined';
+  confirmedAt?: string;
+  declinedAt?: string;
+  declinedReason?: string;
+  token: string; // token for public direct confirmation url
+}
+
+export type ProofStatus =
+  | 'Self-documented'
+  | 'Evidence-backed'
+  | 'Confirmation pending'
+  | 'Client-confirmed';
+
+export const PROOF_STATUS_DEFINITIONS: Record<
+  ProofStatus,
+  { label: string; meaning: string; description: string }
+> = {
+  'Self-documented': {
+    label: 'Self-documented',
+    meaning: 'Added by the professional.',
+    description: 'Documented by the professional directly without attached evidence or client confirmation.'
+  },
+  'Evidence-backed': {
+    label: 'Evidence-backed',
+    meaning: 'Supporting evidence has been attached.',
+    description: 'Supported by uploaded photos, blueprints, documents, video walkthroughs, or live links.'
+  },
+  'Confirmation pending': {
+    label: 'Confirmation pending',
+    meaning: 'Awaiting independent client confirmation.',
+    description: 'A confirmation request has been sent to the client and is awaiting their independent review.'
+  },
+  'Client-confirmed': {
+    label: 'Client-confirmed',
+    meaning: 'A client or relevant person has independently confirmed the work.',
+    description: 'Independently verified by the commissioning client or witness with confirmation date and feedback.'
+  }
+};
+
+export function getRecordProofStatus(record: WorkRecord): ProofStatus {
+  if (record.confirmationStatus === 'confirmed' || record.confirmation?.status === 'confirmed') {
+    return 'Client-confirmed';
+  }
+  if (record.confirmationStatus === 'pending' || record.confirmation?.status === 'pending') {
+    return 'Confirmation pending';
+  }
+  const hasEvidence =
+    record.evidenceStatus === 'attached' ||
+    record.evidenceStatus === 'verified' ||
+    (record.evidenceList && record.evidenceList.length > 0);
+  if (hasEvidence) {
+    return 'Evidence-backed';
+  }
+  return 'Self-documented';
+}
+
+export interface WorkRecord {
+  id: string;
+  userId: string;
+  title: string;
+  category: string;
+  description: string;
+  skillsDemonstrated: string[];
+  completionDate: string; // YYYY-MM or YYYY-MM-DD
+  location?: string;
+  clientName?: string;
+  clientEmail?: string;
+  visibility: VisibilityStatus;
+  createdAt: string;
+  evidenceStatus: EvidenceStatus;
+  confirmationStatus: ConfirmationStatus;
+  evidenceList?: EvidenceItem[];
+  confirmation?: ClientConfirmation;
+  isTakenDown?: boolean;
+  takeDownReason?: string;
+  moderatedAt?: string;
+  moderatedBy?: string;
+  isFlagged?: boolean;
+
+  // Administrative Content & Distribution Controls
+  isFeatured?: boolean;
+  featuredPriority?: number; // 1 = highest rank, 2, 3...
+  isRecommended?: boolean;
+  homepagePlacement?: 'hero_spotlight' | 'trending_proof' | 'featured_deliverable' | 'none';
+  curatedCollectionIds?: string[];
+  featuredNote?: string;
+  featuredBy?: string;
+  featuredAt?: string;
+}
+
+export interface SkillProofMetric {
+  name: string;
+  workRecordsCount: number;
+  evidenceBackedCount: number;
+  confirmedCount: number;
+  isProven: boolean; // has at least 1 evidence or confirmation
+}
+
+export interface ProfileMetrics {
+  totalRecords: number;
+  clientConfirmedRecords: number;
+  evidenceBackedRecords: number;
+  documentedSkillsCount: number;
+  timelineStartYear: number | null;
+  timelineEndYear: number | null;
+  timelineSpanText: string;
+  proofRatio: number; // percentage 0-100 of records with proof or confirmation
+}
+
+export type ActiveTab =
+  | 'dashboard'
+  | 'my-work'
+  | 'discover'
+  | 'messages'
+  | 'add-work'
+  | 'profile'
+  | 'public-preview'
+  | 'operations';
+
+export interface DemonstratedSkillInfo {
+  name: string;
+  documentedWorkCount: number;
+  evidenceBackedCount: number;
+  clientConfirmedCount: number;
+  isProven: boolean;
+}
+
+export interface DiscoverProfessional {
+  user: UserProfile;
+  totalPublicRecords: number;
+  evidenceBackedRecords: number;
+  clientConfirmedRecords: number;
+  demonstratedSkills: string[];
+  demonstratedSkillsWithCounts: DemonstratedSkillInfo[];
+  profileOnlySkills: string[];
+  workCategories: string[];
+  featuredPublicRecords: WorkRecord[];
+}
+
+export interface Conversation {
+  id: string;
+  participantOneId: string;
+  participantTwoId: string;
+  participantIds: [string, string];
+  createdAt: string;
+  lastMessageDate: string;
+  lastMessageContent: string;
+  lastMessageSenderId: string;
+  lastMessageIsRead: boolean;
+  context?: 'discovered_via_proof' | 'profile_inquiry' | 'direct';
+  contextProfessionalId?: string; // which professional's profile was the genesis
+  hiddenForUserIds?: string[]; // allows either user to delete/hide conversation from their inbox
+  blockedByUserIds?: string[]; // tracks which user(s) initiated block
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  sentDate: string;
+  readStatus: boolean;
+  readAt?: string;
+}
+
+export type ReportStatus = 'open' | 'under_review' | 'escalated' | 'resolved' | 'dismissed' | 'pending';
+export type ReportSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ReportCategory =
+  | 'fraudulent_proof'
+  | 'unverified_client'
+  | 'inappropriate_evidence'
+  | 'harassment_conduct'
+  | 'impersonation'
+  | 'spam'
+  | 'copyright_dispute'
+  | 'other';
+
+export type ModerationActionType =
+  | 'warning'
+  | 'remove_content'
+  | 'restrict_account'
+  | 'suspend_user'
+  | 'unsuspend_user'
+  | 'escalate'
+  | 'dismiss'
+  | 'user_warned'
+  | 'user_suspended'
+  | 'work_taken_down'
+  | 'none';
+
+export interface ModerationInternalNote {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorEmail: string;
+  note: string;
+  createdAt: string;
+}
+
+export interface ModerationEvidenceAttachment {
+  id: string;
+  title: string;
+  url?: string;
+  note?: string;
+  attachedBy: string;
+  attachedByEmail: string;
+  attachedAt: string;
+}
+
+export interface ReportRecord {
+  id: string;
+  caseNumber?: string; // e.g. "CASE-1042"
+  source?: 'user_report' | 'system_heuristic' | 'automated_flag'; // Extensible for automated moderation hooks
+  reporterId: string;
+  reporterIsAnonymous?: boolean;
+  reporterEmail?: string;
+  reporterName?: string;
+  reportedUserId: string;
+  reportedUserName?: string;
+  conversationId?: string;
+  workRecordId?: string; // linked work record if reporting a specific piece of work
+  targetType?: 'user' | 'work_record' | 'conversation' | 'profile';
+  targetId?: string;
+  category?: ReportCategory;
+  reason: string;
+  details: string;
+  severity?: ReportSeverity;
+  status: ReportStatus; // Open, Under Review, Escalated, Resolved, Dismissed
+  createdAt: string;
+  updatedAt?: string;
+
+  // Assignment
+  assignedModeratorId?: string;
+  assignedModeratorName?: string;
+  assignedModeratorEmail?: string;
+  assignedAt?: string;
+
+  // Investigation
+  internalNotes?: ModerationInternalNote[];
+  evidenceAttachments?: ModerationEvidenceAttachment[];
+  escalationReason?: string;
+  escalatedBy?: string;
+  escalatedAt?: string;
+
+  // Resolution & Decision
+  decisionReason?: string;
+  resolutionNotes?: string;
+  actionTaken?: ModerationActionType;
+  actionDetails?: string;
+  resolvedBy?: string;
+  resolvedByEmail?: string;
+  resolvedAt?: string;
+
+  // Privacy protection
+  confidentialFlag?: boolean;
+}
+
+// ============================================================================
+// SABI OPERATIONS CENTER TYPES
+// ============================================================================
+
+export type PlatformStatus = 'OPERATIONAL' | 'SUSPENDED' | 'MAINTENANCE';
+
+export interface PlatformStatusRecord {
+  status: PlatformStatus;
+  previousStatus: PlatformStatus;
+  reason: string;
+  changedBy: string;
+  changedByEmail: string;
+  changedById: string;
+  changedAt: string;
+  publicNotice?: string;
+  estimatedResolution?: string;
+}
+
+export interface PlatformStatusHistoryEntry {
+  id: string;
+  fromStatus: PlatformStatus;
+  toStatus: PlatformStatus;
+  reason: string;
+  changedBy: string;
+  changedByEmail: string;
+  changedById: string;
+  changedAt: string;
+  publicNotice?: string;
+}
+
+export type AdminRole = 'super_admin' | 'platform_admin' | 'moderator' | 'support';
+
+export interface AdminUser {
+  id: string;
+  userId?: string;
+  email: string;
+  fullName: string;
+  role: AdminRole;
+  active: boolean;
+  addedAt: string;
+  addedBy: string;
+  lastActiveAt?: string;
+  notes?: string;
+}
+
+export type AuditLogCategory =
+  | 'platform'
+  | 'users'
+  | 'moderation'
+  | 'reports'
+  | 'content'
+  | 'support'
+  | 'notifications'
+  | 'settings'
+  | 'roles'
+  | 'security';
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  category: AuditLogCategory;
+  actorEmail: string;
+  actorName: string;
+  actorId: string;
+  targetType?: string;
+  targetId?: string;
+  details: string;
+  previousValue?: string;
+  newValue?: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SupportInternalNote {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorEmail: string;
+  note: string;
+  createdAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  senderName: string;
+  senderEmail: string;
+  isStaff: boolean;
+  content: string;
+  timestamp: string;
+  isInternalNote?: boolean;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  userId?: string;
+  userEmail: string;
+  userName: string;
+  subject: string;
+  category: 'verification' | 'account' | 'confirmation_issue' | 'bug' | 'dispute' | 'general';
+  status: 'open' | 'in_progress' | 'escalated' | 'resolved' | 'closed';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  createdAt: string;
+  updatedAt: string;
+  assignedTo?: string;
+  assignedToEmail?: string;
+  assignedToName?: string;
+  escalationReason?: string;
+  escalatedReason?: string;
+  escalatedAt?: string;
+  escalatedBy?: string;
+  resolutionSummary?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  internalNotes?: SupportInternalNote[];
+  messages: SupportTicketMessage[];
+}
+
+// ============================================================================
+// CONTENT & DISTRIBUTION CURATION TYPES
+// ============================================================================
+
+export interface CuratedCollection {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  badgeLabel: string;
+  accentColor?: string;
+  targetCategory?: string; // 'all' or specific category
+  isActive: boolean;
+  displayOrder: number;
+  featuredWorkIds: string[];
+  featuredUserIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy?: string;
+}
+
+export interface DiscoverySectionConfig {
+  id: string;
+  sectionKey: 'hero_highlights' | 'curated_themes' | 'spotlight_creators' | 'verified_proofs' | 'recent_deliverables';
+  title: string;
+  subtitle: string;
+  description?: string;
+  isEnabled: boolean;
+  displayOrder: number;
+  itemLimit: number;
+  sortBy: 'priority' | 'client_confirmed' | 'recent' | 'evidence_count';
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface CuratedTag {
+  id: string;
+  name: string;
+  category: string;
+  isFeatured: boolean;
+  priorityOrder: number;
+  usageCount?: number;
+}
+
+export interface OperationsNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'operational' | 'maintenance' | 'advisory' | 'update';
+  active: boolean;
+  broadcastToAll: boolean;
+  createdAt: string;
+  createdBy: string;
+  expiresAt?: string;
+}
+
+export interface PlatformSettings {
+  allowRegistrations: boolean;
+  allowNewWorkSubmissions: boolean;
+  allowClientConfirmations: boolean;
+  requireEmailVerification: boolean;
+  maxEvidenceUploadMB: number;
+  maxEvidencePerRecord: number;
+  publicDiscoveryEnabled: boolean;
+  messagingEnabled: boolean;
+  maintenanceNotice: string;
+  suspensionNotice: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export type OperationsSection =
+  | 'overview'
+  | 'users'
+  | 'moderation'
+  | 'reports'
+  | 'content'
+  | 'support'
+  | 'notifications'
+  | 'settings'
+  | 'roles'
+  | 'audit-logs'
+  | 'analytics'
+  | 'system-health';
+

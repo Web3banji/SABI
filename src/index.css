@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --bg-background: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FAF8F5;
+  --bg-surface-hover: #F3EFEA;
+  --border-subtle: #E7E2D8;
+  --border-strong: #D5CEC2;
+  --text-primary: #16222F;
+  --text-secondary: #52606D;
+  --text-muted: #7A8690;
+  --accent-primary: #2D4D45;
+  --accent-primary-hover: #223B35;
+  --accent-subtle: #EAF3EF;
+  --accent-gold: #D4A359;
+}
+
+@layer base {
+  body {
+    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #FAF8F5;
+    color: #16222F;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, .font-display, .font-serif {
+    font-family: 'Bricolage Grotesque', 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  code, kbd, samp, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+}
+
+/* Semantic Brand-Neutral Tokens */
+.bg-background { background-color: var(--bg-background); }
+.bg-surface { background-color: var(--bg-surface); }
+.bg-surface-elevated { background-color: var(--bg-surface-elevated); }
+.bg-surface-hover { background-color: var(--bg-surface-hover); }
+.hover\:bg-surface-hover:hover { background-color: var(--bg-surface-hover); }
+.border-subtle { border-color: var(--border-subtle); }
+.border-strong { border-color: var(--border-strong); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-accent-primary { color: var(--accent-primary); }
+.bg-accent-primary { background-color: var(--accent-primary); }
+.bg-accent-subtle { background-color: var(--accent-subtle); }
+
+/* Brand palette helper classes */
+.bg-sabi-sage-dark { background-color: #2D4D45; }
+.bg-sabi-sage { background-color: #4D7A70; }
+.text-sabi-sage { color: #4D7A70; }
+.bg-sabi-sage-light { background-color: #EAF3EF; }
+.text-sabi-sage-dark { color: #25463E; }
+.bg-sabi-lavender { background-color: #8C7CA7; }
+.text-sabi-lavender { color: #8C7CA7; }
+.bg-sabi-lavender-light { background-color: #F3EFF9; }
+.text-sabi-lavender-dark { color: #61507C; }
+.bg-sabi-ochre { background-color: #D4A359; }
+.text-sabi-ochre { color: #D4A359; }
+.bg-sabi-ochre-light { background-color: #FDF5EA; }
+.text-sabi-ochre-dark { color: #93652E; }
+.bg-sabi-cream { background-color: #FAF8F5; }
+.text-sabi-navy { color: #16222F; }
+
+/* Mobile Touch & Viewport Utilities */
+.touch-suppress {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-y: none;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
